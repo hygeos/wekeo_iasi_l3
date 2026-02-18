@@ -28,11 +28,8 @@ import numpy as np
 import xarray as xr
 
 # Set CODA_DEFINITION before importing coda
-# Look for codadef file in common locations
 _CODADEF_SEARCH_PATHS = [
-    Path(__file__).parent / "codadefs",   # project/codadef/
-    # Path.home() / ".local" / "share" / "coda" / "definitions",
-    # Path("/usr/share/coda/definitions"),
+    Path(__file__).parent / "codadefs",   # decided to embed codadef files in the package for simplicity (~250kb)
 ]
 
 def _find_codadef() -> Optional[Path]:
@@ -470,23 +467,3 @@ def read_iasi_l2_subset(
                 ds[var_name].attrs["units"] = var_info["units"]
         
         return ds
-
-
-# Convenience function for quick access
-def open_iasi(path: Union[str, Path], **kwargs) -> xr.Dataset:
-    """Alias for read_iasi_l2. Opens an IASI L2 product file."""
-    return read_iasi_l2(path, **kwargs)
-
-
-if __name__ == "__main__":
-    # Quick test
-    import sys
-    
-    if len(sys.argv) > 1:
-        path = sys.argv[1]
-    else:
-        path = "test_input/IASI_SND_02_M01_20240816222952Z_20240817001456Z_N_O_20240816233022Z"
-    
-    print(f"Reading: {path}")
-    ds = read_iasi_l2(path)
-    print(ds)
