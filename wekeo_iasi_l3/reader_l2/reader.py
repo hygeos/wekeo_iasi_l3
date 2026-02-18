@@ -343,7 +343,16 @@ def read_iasi_l2(
         coords["footprint"] = ("footprint", np.arange(120))  # IASI has 120 footprints per scanline
         coords["cloud_formation"] = ("cloud_formation", np.arange(3))  # Up to 3 cloud layers
         coords["latlon"] = ("latlon", ["latitude", "longitude"])
-        coords["angle"] = ("angle", ["satellite_zenith", "satellite_azimuth", "solar_zenith", "solar_azimuth"])
+        # 'long_name': 'Angular relations (satellite zenith, satellite azimuth, solar zenith, solar azimuth)', 
+        coords["angle"] = ("angle", ["VZA", "VAA", "SZA", "SAA"])
+        
+        # convert to VZA, VAA, SZA, SAA if ANGULAR_RELATION is available
+        if "ANGULAR_RELATION" in data_vars:
+            angles = data_vars["ANGULAR_RELATION"][1]
+            coords["VZA"] = (("scanline", "footprint"), angles[:, :, 0])
+            coords["VAA"] = (("scanline", "footprint"), angles[:, :, 1])
+            coords["SZA"] = (("scanline", "footprint"), angles[:, :, 2])
+            coords["SAA"] = (("scanline", "footprint"), angles[:, :, 3])
         
         # Create dataset
         ds = xr.Dataset(data_vars=data_vars, coords=coords)
@@ -452,7 +461,7 @@ def read_iasi_l2_subset(
         coords["footprint"] = ("footprint", np.arange(120))
         coords["cloud_formation"] = ("cloud_formation", np.arange(3))
         coords["latlon"] = ("latlon", ["latitude", "longitude"])
-        coords["angle"] = ("angle", ["satellite_zenith", "satellite_azimuth", "solar_zenith", "solar_azimuth"])
+        coords["angle"] = ("angle", ["VZA", "VAA", "SZA", "SAA"])
         
         ds = xr.Dataset(data_vars=data_vars, coords=coords)
         
