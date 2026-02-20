@@ -183,6 +183,7 @@ def get_IASI_products(
         List[Path]: List of paths to the extracted IASI product directories
     """
 
+    log.info(f"Querying IASI L3 products from {start_date} to {end_date} with publication date {publication}")
     hda_client = Client()
 
     json_query = format_query(start_date, end_date, publication)

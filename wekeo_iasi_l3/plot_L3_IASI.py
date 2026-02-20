@@ -5,8 +5,8 @@ import xarray as xr
 from pathlib import Path
 
 # ===== CONFIGURATION PARAMETERS =====
-BACKGROUND_COLOR = 'white'
-FOREGROUND_COLOR = 'black'
+BACKGROUND_COLOR = 'black'
+FOREGROUND_COLOR = 'white'
 GRIDLINES_COLOR = 'gray'
 USE_LOG_SCALE = False
 FONT_SIZE = 14

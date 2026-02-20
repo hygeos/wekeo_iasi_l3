@@ -1,17 +1,6 @@
 """Read IASI L2 Combined Product (.nat files) using CODA library.
 
-IASI (Infrared Atmospheric Sounding Interferometer) L2 Combined Product contains:
-- Temperature Profiles
-- Humidity Profiles  
-- Surface Temperature
-- Surface Emissivity
-- Fractional Cloud Cover
-- Cloud Top Temperature
-- Cloud Top Pressure
-- Cloud Phase
-- Total Column Ozone
-- Columnar ozone amounts in thick layers
-- Total column N2O, CO, CH4, CO2
+IASI L2 Combined Product contains:
 
 Requires CODA library and EPS codadef file.
 Download from: https://github.com/stcorp/codadef-eps/releases
@@ -187,20 +176,6 @@ IASI_L2_VARIABLES = {
     },
 }
 
-# Default variables to read (most commonly used)
-DEFAULT_VARIABLES = [
-    "EARTH_LOCATION",
-    "SURFACE_TEMPERATURE",
-    "ATMOSPHERIC_TEMPERATURE",
-    "ATMOSPHERIC_WATER_VAPOUR",
-    "FRACTIONAL_CLOUD_COVER",
-    "CLOUD_TOP_PRESSURE",
-    "INTEGRATED_OZONE",
-    "INTEGRATED_CO2",
-    "INTEGRATED_CH4",
-    "INTEGRATED_CO",
-]
-
 
 def explore_product(input_path: Union[str, Path]) -> None:
     """
@@ -253,6 +228,55 @@ def _find_nat_file(input_path: Union[str, Path]) -> Path:
         raise ValueError(f"Expected .nat file or directory, got: {input_path}")
 
 
+def _read_variable_by_record(coda, product, var_name: str, n_scanlines: int) -> Optional[np.ndarray]:
+    """
+    Read a variable record by record, handling "special" type MDRs.
+    
+    When some MDR records are marked as "special" (empty/missing data), 
+    bulk fetch with -1 index fails. This function reads each record 
+    individually and fills gaps with NaN.
+    
+    Args:
+        coda: The coda module
+        product: Open CODA product handle  
+        var_name: Name of the variable to read
+        n_scanlines: Number of MDR records (scanlines)
+        
+    Returns:
+        numpy array with data, or None if all records failed
+    """
+    records = []
+    valid_count = 0
+    
+    for i in range(n_scanlines):
+        try:
+            raw_data = coda.fetch(product, "MDR", i, "MDR", var_name)
+            records.append(np.array(raw_data))
+            valid_count += 1
+        except Exception:
+            # This record is "special" (missing) - will be filled with NaN
+            records.append(None)
+    
+    if valid_count == 0:
+        return None
+    
+    # Find a valid record to determine shape and dtype
+    ref_record = next(r for r in records if r is not None)
+    shape = ref_record.shape
+    dtype = ref_record.dtype
+    
+    # Create output array filled with NaN
+    out_shape = (n_scanlines,) + shape
+    result = np.full(out_shape, np.nan, dtype=dtype)
+    
+    # Fill in valid records
+    for i, rec in enumerate(records):
+        if rec is not None:
+            result[i] = rec
+    
+    return result
+
+
 def read_iasi_l2(
     input_path: Union[str, Path],
     variables: Optional[List[str]] = None,
@@ -263,7 +287,7 @@ def read_iasi_l2(
     
     Args:
         input_path: Path to directory containing .nat file or path to .nat file directly
-        variables: List of variable names to read. If None, reads DEFAULT_VARIABLES.
+        variables: List of variable names to read.
                   Use IASI_L2_VARIABLES.keys() to see all available variables.
         chunked: If True, return dask arrays (for lazy loading). Not yet implemented.
     
@@ -288,9 +312,6 @@ def read_iasi_l2(
     
     nat_file = _find_nat_file(input_path)
     
-    if variables is None:
-        variables = DEFAULT_VARIABLES
-    
     # Validate variable names
     invalid_vars = set(variables) - set(IASI_L2_VARIABLES.keys())
     if invalid_vars:
@@ -310,11 +331,14 @@ def read_iasi_l2(
         # Read all MDR data
         data_vars = {}
         
+        always_read_variables = ["ANGULAR_RELATION", "EARTH_LOCATION"]
+        variables = set(variables + always_read_variables)  # Ensure we always read these for coordinates
+        
         for var_name in variables:
             var_info = IASI_L2_VARIABLES[var_name]
             
             try:
-                # Fetch all scanlines at once using -1 index
+                # First try to fetch all scanlines at once using -1 index (faster)
                 raw_data = coda.fetch(product, "MDR", -1, "MDR", var_name)
                 data = np.array(raw_data)
                 
@@ -326,8 +350,20 @@ def read_iasi_l2(
                 data_vars[var_name] = (var_info["dims"], data)
                 
             except Exception as e:
-                warnings.warn(f"Could not read {var_name}: {e}")
-                continue
+                # If bulk fetch fails (due to "special" type MDRs), read record by record
+                if "special" in str(e).lower():
+                    try:
+                        data = _read_variable_by_record(coda, product, var_name, n_scanlines)
+                        if data is not None:
+                            data_vars[var_name] = (var_info["dims"], data)
+                        else:
+                            warnings.warn(f"Could not read any records for {var_name}")
+                    except Exception as e2:
+                        warnings.warn(f"Could not read {var_name} even record-by-record: {e2}")
+                        continue
+                else:
+                    warnings.warn(f"Could not read {var_name}: {e}")
+                    continue
         
         # Extract lat/lon from EARTH_LOCATION if available
         coords = {}
@@ -341,9 +377,10 @@ def read_iasi_l2(
         coords["emissivity_wavelength"] = ("emissivity_wavelength", emissivity_wavelengths)
         coords["scanline"] = ("scanline", np.arange(n_scanlines))
         coords["footprint"] = ("footprint", np.arange(120))  # IASI has 120 footprints per scanline
+        
         coords["cloud_formation"] = ("cloud_formation", np.arange(3))  # Up to 3 cloud layers
-        coords["latlon"] = ("latlon", ["latitude", "longitude"])
         # 'long_name': 'Angular relations (satellite zenith, satellite azimuth, solar zenith, solar azimuth)', 
+        
         coords["angle"] = ("angle", ["VZA", "VAA", "SZA", "SAA"])
         
         # convert to VZA, VAA, SZA, SAA if ANGULAR_RELATION is available
@@ -376,103 +413,14 @@ def read_iasi_l2(
         if "latitude" in ds.coords:
             ds.coords["latitude"].attrs["units"] = "degrees_north"
             ds.coords["latitude"].attrs["long_name"] = "Latitude"
+            
         if "longitude" in ds.coords:
             ds.coords["longitude"].attrs["units"] = "degrees_east"
             ds.coords["longitude"].attrs["long_name"] = "Longitude"
+            
         if "pressure_level" in ds.coords:
             ds.coords["pressure_level"].attrs["units"] = "Pa"
             ds.coords["pressure_level"].attrs["long_name"] = "Pressure level"
             ds.coords["pressure_level"].attrs["positive"] = "down"
-        
-        return ds
-
-
-def read_iasi_l2_subset(
-    input_path: Union[str, Path],
-    scanline_start: int = 0,
-    scanline_end: Optional[int] = None,
-    variables: Optional[List[str]] = None,
-) -> xr.Dataset:
-    """
-    Read a subset of scanlines from IASI L2 product.
-    
-    Useful for large files when you only need part of the data.
-    
-    Args:
-        input_path: Path to .nat file or directory containing it
-        scanline_start: First scanline index to read (0-based)
-        scanline_end: Last scanline index (exclusive). If None, reads to end.
-        variables: Variables to read. If None, uses DEFAULT_VARIABLES.
-        
-    Returns:
-        xarray.Dataset with the subset of data
-    """
-    coda = _setup_coda()
-    nat_file = _find_nat_file(input_path)
-    
-    if variables is None:
-        variables = DEFAULT_VARIABLES
-    
-    with coda.Product(str(nat_file)) as product:
-        n_scanlines = coda.get_size(product, "MDR")[0]
-        
-        if scanline_end is None:
-            scanline_end = n_scanlines
-        
-        scanline_end = min(scanline_end, n_scanlines)
-        
-        # Get coordinates
-        pressure_levels = np.array(coda.fetch(product, "GIADR", "PRESSURE_LEVELS_TEMP"))
-        emissivity_wavelengths = np.array(coda.fetch(product, "GIADR", "SURFACE_EMISSIVITY_WAVELENGTHS"))
-        
-        data_vars = {}
-        
-        for var_name in variables:
-            if var_name not in IASI_L2_VARIABLES:
-                warnings.warn(f"Unknown variable: {var_name}")
-                continue
-                
-            var_info = IASI_L2_VARIABLES[var_name]
-            
-            try:
-                # Read scanlines one by one (slower but allows subsetting)
-                data_list = []
-                for i in range(scanline_start, scanline_end):
-                    raw = coda.fetch(product, "MDR", i, "MDR", var_name)
-                    data_list.append(np.array(raw))
-                
-                data = np.stack(data_list, axis=0)
-                data_vars[var_name] = (var_info["dims"], data)
-                
-            except Exception as e:
-                warnings.warn(f"Could not read {var_name}: {e}")
-        
-        # Build coordinates
-        coords = {}
-        if "EARTH_LOCATION" in data_vars:
-            earth_loc = data_vars["EARTH_LOCATION"][1]
-            coords["latitude"] = (("scanline", "footprint"), earth_loc[:, :, 0])
-            coords["longitude"] = (("scanline", "footprint"), earth_loc[:, :, 1])
-        
-        n_subset = scanline_end - scanline_start
-        coords["pressure_level"] = ("pressure_level", pressure_levels)
-        coords["emissivity_wavelength"] = ("emissivity_wavelength", emissivity_wavelengths)
-        coords["scanline"] = ("scanline", np.arange(scanline_start, scanline_end))
-        coords["footprint"] = ("footprint", np.arange(120))
-        coords["cloud_formation"] = ("cloud_formation", np.arange(3))
-        coords["latlon"] = ("latlon", ["latitude", "longitude"])
-        coords["angle"] = ("angle", ["VZA", "VAA", "SZA", "SAA"])
-        
-        ds = xr.Dataset(data_vars=data_vars, coords=coords)
-        
-        ds.attrs["source_file"] = str(nat_file.name)
-        ds.attrs["product_class"] = product.product_class
-        ds.attrs["product_type"] = product.product_type
-        ds.attrs["scanline_range"] = f"{scanline_start}:{scanline_end}"
-        
-        for var_name, var_info in IASI_L2_VARIABLES.items():
-            if var_name in ds:
-                ds[var_name].attrs["long_name"] = var_info["description"]
-                ds[var_name].attrs["units"] = var_info["units"]
         
         return ds
