@@ -4,7 +4,14 @@ version = "0.1.0"
 description = ""
 requires-python = ">= 3.10"
 authors = [{name = "HYGEOS", email = "contact@hygeos.com"}]
-dependencies = ["hda"]
+dependencies = [
+    "hda",
+    "netcdf4",
+    "xarray",
+    "numpy",
+    "python-dotenv",
+    
+]
 
 [project.optional-dependencies]
 git = [
@@ -40,6 +47,7 @@ xarray = "*"
 numpy = "*"
 coda = "*"
 pypdf = "*"
+netcdf4 = "*"
 python-dotenv = "*"
 
 [tool.pixi.environments]

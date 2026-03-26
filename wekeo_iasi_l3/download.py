@@ -5,7 +5,7 @@ from pathlib import Path
 
 from hda import Client, Configuration
 
-from wekeo_iasi_l3 import env
+from wekeo_iasi_l3 import config, env
 from wekeo_iasi_l3.hygeos_core import log
 
 
@@ -143,30 +143,8 @@ def format_query(
     return json_query
 
 
-def get_storage_path():
-    """
-    Retrieves and prepares the storage path for IASI L3 products.
-    Gets the base path from the DIR_ANCILLARY environment variable.
-    
-    Returns:
-        Path: The IASI_L2 storage path.
-        
-    Raises:
-        ValueError: If DIR_ANCILLARY is not set or the path does not exist.
-    """
-    
-    storage_path = Path(env.getvar("DIR_ANCILLARY"))
-    if not storage_path.exists():
-        raise ValueError("Environment variable DIR_ANCILLARY not set or path does not exist")
-        
-    storage_path = Path(storage_path) / "IASI_L2"
-    if not storage_path.exists():
-        storage_path.mkdir(exist_ok=True)
-        
-    return storage_path
 
-
-def get_IASI_products(
+def download_IASI_products(
     start_date: str,
     end_date: str,
     publication: str | None = None,
@@ -189,5 +167,5 @@ def get_IASI_products(
     json_query = format_query(start_date, end_date, publication)
     query = hda_client.search(json_query)
     
-    results = download(query, archive_dir=get_storage_path(), rm_archive=False)
+    results = download(query, archive_dir=config.iasi_download_dir, rm_archive=False)
     return results
