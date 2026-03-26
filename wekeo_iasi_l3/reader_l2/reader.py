@@ -16,6 +16,8 @@ import warnings
 import numpy as np
 import xarray as xr
 
+from wekeo_iasi_l3.hygeos_core import log
+
 # Set CODA_DEFINITION before importing coda
 _CODADEF_SEARCH_PATHS = [
     Path(__file__).parent / "codadefs",   # decided to embed codadef files in the package for simplicity (~250kb)
@@ -249,13 +251,16 @@ def _read_variable_by_record(coda, product, var_name: str, n_scanlines: int) -> 
     valid_count = 0
     
     for i in range(n_scanlines):
-        try:
-            raw_data = coda.fetch(product, "MDR", i, "MDR", var_name)
-            records.append(np.array(raw_data))
-            valid_count += 1
-        except Exception:
-            # This record is "special" (missing) - will be filled with NaN
-            records.append(None)
+        # try:
+        
+        raw_data = coda.fetch(product, "MDR", i, "MDR", var_name)
+        records.append(np.array(raw_data))
+        valid_count += 1
+        
+        # except Exception:
+        #     # This record is "special" (missing) - will be filled with NaN
+        #     log.warning(f"Record {i} for variable '{var_name}' is missing/special. Filling with NaN.")
+        #     records.append(None)
     
     if valid_count == 0:
         return None
@@ -337,33 +342,35 @@ def read_iasi_l2(
         for var_name in variables:
             var_info = IASI_L2_VARIABLES[var_name]
             
-            try:
-                # First try to fetch all scanlines at once using -1 index (faster)
-                raw_data = coda.fetch(product, "MDR", -1, "MDR", var_name)
-                data = np.array(raw_data)
+            # try:
+            
+            # First try to fetch all scanlines at once using -1 index (faster)
+            raw_data = coda.fetch(product, "MDR", -1, "MDR", var_name)
+            data = np.array(raw_data)
+            
+            # Handle object arrays (happens when CODA returns nested structures)
+            if data.dtype == object:
+                # Stack into proper array
+                data = np.stack([np.array(d) for d in data])
+            
+            data_vars[var_name] = (var_info["dims"], data)
                 
-                # Handle object arrays (happens when CODA returns nested structures)
-                if data.dtype == object:
-                    # Stack into proper array
-                    data = np.stack([np.array(d) for d in data])
-                
-                data_vars[var_name] = (var_info["dims"], data)
-                
-            except Exception as e:
-                # If bulk fetch fails (due to "special" type MDRs), read record by record
-                if "special" in str(e).lower():
-                    try:
-                        data = _read_variable_by_record(coda, product, var_name, n_scanlines)
-                        if data is not None:
-                            data_vars[var_name] = (var_info["dims"], data)
-                        else:
-                            warnings.warn(f"Could not read any records for {var_name}")
-                    except Exception as e2:
-                        warnings.warn(f"Could not read {var_name} even record-by-record: {e2}")
-                        continue
-                else:
-                    warnings.warn(f"Could not read {var_name}: {e}")
-                    continue
+            # except Exception as e:
+            #     log.error(f"Failed to read variable '{var_name}' with bulk fetch: {e}")
+            #     # If bulk fetch fails (due to "special" type MDRs), read record by record
+            #     if "special" in str(e).lower():
+            #         try:
+            #             data = _read_variable_by_record(coda, product, var_name, n_scanlines)
+            #             if data is not None:
+            #                 data_vars[var_name] = (var_info["dims"], data)
+            #             else:
+            #                 warnings.warn(f"Could not read any records for {var_name}")
+            #         except Exception as e2:
+            #             warnings.warn(f"Could not read {var_name} even record-by-record: {e2}")
+            #             continue
+            #     else:
+            #         warnings.warn(f"Could not read {var_name}: {e}")
+            #         continue
         
         # Extract lat/lon from EARTH_LOCATION if available
         coords = {}
@@ -408,6 +415,13 @@ def read_iasi_l2(
             if var_name in ds:
                 ds[var_name].attrs["long_name"] = var_info["description"]
                 ds[var_name].attrs["units"] = var_info["units"]
+            
+                # filter fill values only for non-coordinate variables
+                # WARNING: kind of a hack but works
+                if var_name not in always_read_variables:
+                    fill_val = ds[var_name].max()
+                    ds[var_name] = ds[var_name].where(ds[var_name] < fill_val * 0.99, np.nan) # NOTE: Unclean HACK for fill values
+                    
         
         # Add coordinate attributes
         if "latitude" in ds.coords:
