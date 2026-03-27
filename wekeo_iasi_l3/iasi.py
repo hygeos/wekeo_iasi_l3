@@ -38,7 +38,9 @@ def get_gridded_iasi_l3(
     Download all the IASI Level 2 products for a given day and accumulate them into a gridded L3 dataset.
     """
     
-    output_file = config.gridded_iasi_dir / f"iasi_l3_grid{width}_{day.strftime('%Y%m%d')}.nc"
+    version = "v1"
+    
+    output_file = config.gridded_iasi_dir / f"iasi_l3_grid{width}_{day.strftime('%Y%m%d')}_{version}.nc"
     
     if use_cache and output_file.exists():
         log.info(f"Loading cached Iasi L3 dataset from {output_file}")
