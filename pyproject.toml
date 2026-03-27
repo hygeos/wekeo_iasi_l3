@@ -25,6 +25,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = {find = {}}
 
+[tool.setuptools.package-data]
+"*" = ["*.codadef"]
+
 [tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64"]
