@@ -23,6 +23,7 @@ def plot_L3_IASI(
     vmin: float = None,
     vmax: float = None,
     save_fig_dir: str = None,
+    prefix: str = ""
 ):
     """
     Plot gridded L3 IASI data from an xarray Dataset.
@@ -59,6 +60,8 @@ def plot_L3_IASI(
             f"Variable '{variable}' not found in dataset. "
             f"Available variables: {list(dataset.data_vars)}"
         )
+    
+    variable = prefix + variable # add prefix to variable name if provided
     
     # Extract data
     data = dataset[variable]
