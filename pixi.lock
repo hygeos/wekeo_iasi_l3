@@ -2148,8 +2148,8 @@ packages:
   timestamp: 1770634638503
 - pypi: ./
   name: wekeo-iasi-l3
-  version: 0.1.0
-  sha256: c82bcbf229b67f48eb29866246c415870c1e6e8bbdad60bb615f019527a0535c
+  version: 0.1.1
+  sha256: 1109f20f5d87934fa0869728deda37eb54ea28b6433cbc44ab2d2c68838c71a6
   requires_dist:
   - hda
   - netcdf4

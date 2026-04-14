@@ -29,12 +29,8 @@ def unzip(archive: Path, to: Path | None):
     to = Path(to)
     target = to / archive.stem
     
-    try:
-        with zipfile.ZipFile(archive, 'r') as zip_ref:
-            zip_ref.extractall(target)
-    except Exception as e:
-        log.error(f"Failed to extract {archive} to {target}", exc_info=True)
-        return
+    with zipfile.ZipFile(archive, 'r') as zip_ref:
+        zip_ref.extractall(target)
 
 
 def download(query, archive_dir: Path, extract_dir: Path | None = None, rm_archive: bool = False, recursive_try: int = 0, max_recursive_try: int = 3):
@@ -60,11 +56,15 @@ def download(query, archive_dir: Path, extract_dir: Path | None = None, rm_archi
     extract = []  # archives to extract after download
     results = []  # all extracted paths
     
+    inverse_item = {}
+    
     for item in query.results:
         
         archive_path = archive_dir / f"{item['id']}.zip"
         extract_path = extract_dir / item['id']
         results.append(extract_path)
+        
+        inverse_item[archive_path] = item
         
         if extract_path.exists() == True:
             continue  # already extracted, skip
@@ -93,7 +93,19 @@ def download(query, archive_dir: Path, extract_dir: Path | None = None, rm_archi
                 error_not_downloaded.append(archive)
                 continue
             
-            unzip(archive, to=extract_dir)
+            try:
+                unzip(archive, to=extract_dir)
+            except Exception as e:
+                # match "File is not a zip file"
+                if "File is not a zip file" in str(e):
+                    archive.unlink()  # remove invalid archive
+                    item = inverse_item[archive]
+                    missing.append(item)  # queue for re-download
+                    error_not_downloaded.append(archive)  # add to error list for recursive retry
+                
+                else:
+                    raise e  # re-raise unexpected exceptions
+                    
             if rm_archive:
                 archive.unlink()  # remove archive after extraction
 
