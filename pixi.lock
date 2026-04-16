@@ -35,6 +35,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/executing-2.2.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/fonttools-4.61.1-py313h3dea7bd_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/freetype-2.14.1-ha770c72_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/future-1.0.0-pyhd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h2-4.3.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/hda-2.39-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hdf4-4.2.15-h2a13503_7.conda
@@ -135,6 +136,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-dotenv-1.2.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-gil-3.13.12-h4df99d1_100.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.13-8_cp313.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pyyaml-6.0.3-py313h3dea7bd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyzmq-27.1.0-py312hfb55c3c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/qhull-2020.2-h434a139_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/readline-8.3-h853b02a_0.conda
@@ -154,6 +156,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/xarray-2026.2.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxau-1.0.12-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxdmcp-1.1.5-hb03c661_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/yaml-0.2.5-h280c20c_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h41580af_10.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
@@ -565,6 +568,17 @@ packages:
   purls: []
   size: 173114
   timestamp: 1757945422243
+- conda: https://conda.anaconda.org/conda-forge/noarch/future-1.0.0-pyhd8ed1ab_2.conda
+  sha256: 45dfd037889b7075c5eb46394f93172de0be0b1624c7f802dd3ecc94b814d8e0
+  md5: 1054c53c95d85e35b88143a3eda66373
+  depends:
+  - python >=3.9
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/future?source=hash-mapping
+  size: 364561
+  timestamp: 1738926525117
 - pypi: https://files.pythonhosted.org/packages/d3/be/5a0761ed9deb4d30a079bd022f4289d309075188cd2a7f17064e45f2de3f/gems-0.4.0-py2.py3-none-any.whl
   name: gems
   version: 0.4.0
@@ -2018,6 +2032,21 @@ packages:
   purls: []
   size: 7002
   timestamp: 1752805902938
+- conda: https://conda.anaconda.org/conda-forge/linux-64/pyyaml-6.0.3-py313h3dea7bd_1.conda
+  sha256: ef7df29b38ef04ec67a8888a4aa039973eaa377e8c4b59a7be0a1c50cd7e4ac6
+  md5: f256753e840c3cd3766488c9437a8f8b
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - python >=3.13,<3.14.0a0
+  - python_abi 3.13.* *_cp313
+  - yaml >=0.2.5,<0.3.0a0
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/pyyaml?source=compressed-mapping
+  size: 201616
+  timestamp: 1770223543730
 - conda: https://conda.anaconda.org/conda-forge/linux-64/pyzmq-27.1.0-py312hfb55c3c_0.conda
   noarch: python
   sha256: a00a41b66c12d9c60e66b391e9a4832b7e28743348cf4b48b410b91927cd7819
@@ -2227,7 +2256,7 @@ packages:
 - pypi: ./
   name: wekeo-iasi-l3
   version: 0.1.1
-  sha256: 01a44acb0888b3e43fb97727e4554e8ec0154938b9b55df77ddbf7357c676ede
+  sha256: e741d239a598a84d28f0dadd46b9f3172f36c4576bf6258c33df630d4632f3bc
   requires_dist:
   - hda
   - netcdf4
@@ -2236,6 +2265,8 @@ packages:
   - python-dotenv
   - coda
   - pypdf
+  - pyyaml
+  - future
   requires_python: '>=3.10'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/xarray-2026.2.0-pyhcf101f3_0.conda
@@ -2298,6 +2329,17 @@ packages:
   purls: []
   size: 20591
   timestamp: 1762976546182
+- conda: https://conda.anaconda.org/conda-forge/linux-64/yaml-0.2.5-h280c20c_3.conda
+  sha256: 6d9ea2f731e284e9316d95fa61869fe7bbba33df7929f82693c121022810f4ad
+  md5: a77f85f77be52ff59391544bfe73390a
+  depends:
+  - libgcc >=14
+  - __glibc >=2.17,<3.0.a0
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 85189
+  timestamp: 1753484064210
 - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h41580af_10.conda
   sha256: 325d370b28e2b9cc1f765c5b4cdb394c91a5d958fbd15da1a14607a28fee09f6
   md5: 755b096086851e1193f3b10347415d7c

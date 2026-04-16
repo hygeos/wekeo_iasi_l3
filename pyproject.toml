@@ -12,6 +12,8 @@ dependencies = [
     "python-dotenv",
     "coda",
     "pypdf",
+    "pyyaml",
+    "future",
 ]
 
 [project.optional-dependencies]
@@ -53,6 +55,8 @@ coda = "*"
 pypdf = "*"
 netcdf4 = "*"
 python-dotenv = "*"
+pyyaml = "*"
+future = "*"
 
 [tool.pixi.environments]
 default = { features = ['sys', 'sub', 'dev'], solve-group = "default" }
