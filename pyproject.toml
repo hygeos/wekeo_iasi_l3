@@ -10,7 +10,7 @@ dependencies = [
     "xarray",
     "numpy",
     "python-dotenv",
-    "coda",
+    # "coda",
     "pypdf",
     "pyyaml",
     "future",

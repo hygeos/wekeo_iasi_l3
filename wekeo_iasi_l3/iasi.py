@@ -53,7 +53,7 @@ def get_gridded_iasi_l3(
     ds = xr.Dataset()
     
     bad_files = []
-    
+    dataset = None
     for variable in variables:
         
         log.info(f"Processing variable: {variable}")
@@ -72,6 +72,10 @@ def get_gridded_iasi_l3(
                 log.error(f"Error processing file {file}: {e}")
                 bad_files.append(file)
                 continue
+        
+        if dataset is None:
+            log.warning(f"No valid data found for variable {variable} on {day}. Skipping.")
+            continue
         
         # append the gridded L3 to the output dataset
         ds[variable + "_MEAN"] = acc.get_mean_data_array()
