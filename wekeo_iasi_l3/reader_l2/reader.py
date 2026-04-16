@@ -6,8 +6,6 @@ Requires CODA library and EPS codadef file.
 Download from: https://github.com/stcorp/codadef-eps/releases
 """
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
 from typing import Union, Optional, List

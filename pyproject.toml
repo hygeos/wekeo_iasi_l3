@@ -10,7 +10,8 @@ dependencies = [
     "xarray",
     "numpy",
     "python-dotenv",
-    
+    "coda",
+    "pypdf",
 ]
 
 [project.optional-dependencies]
