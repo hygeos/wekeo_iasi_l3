@@ -9,6 +9,14 @@
 
 ## Installation
 
+Requires the coda package !
+
+https://github.com/stcorp/coda
+
+NOT DISTRIBUTED VIA PYPI !
+
+Installation works with conda + pip though.
+
 ## Usage
 
 
