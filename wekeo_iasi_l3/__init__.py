@@ -8,6 +8,27 @@ on PyPI and is not compatible with this project.
 
 def _validate_coda_installation() -> None:
     """Fail fast if CODA is missing or if the wrong ``coda`` package is installed."""
+    import os
+    from pathlib import Path
+
+    # --------------------------------------------------------------------------
+    # NOTE: the simple import check actually broke the whole coda library 
+    # for the project; this is a fix for this.
+    # --------------------------------------------------------------------------
+    # Explaination:
+    #   CODA_DEFINITION must be set before the first `import coda`, because the
+    #   C extension reads the env var once at initialisation time.  Importing
+    #   coda without a valid definition directory causes coda_open() to fail with
+    #   "unsupported product file" even if CODA_DEFINITION is set afterwards.
+    # --------------------------------------------------------------------------
+    if "CODA_DEFINITION" not in os.environ:
+        _codadef_dir = Path(__file__).parent / "reader_l2" / "codadefs"
+        if _codadef_dir.exists() and list(_codadef_dir.glob("*.codadef")):
+            os.environ["CODA_DEFINITION"] = str(_codadef_dir)
+    # --------------------------------------------------------------------------
+    # > we manually inject the CODA_DEFINITION env var here to avoid breaking the coda library for the whole project.
+    # --------------------------------------------------------------------------
+
     try:
         import coda
     except Exception as exc:
